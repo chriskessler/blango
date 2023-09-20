@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from configurations import Configuration, values
 import dj_database_url
+import logging
 
 class Dev(Configuration):
     # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -140,7 +141,57 @@ class Dev(Configuration):
 
     DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+    DJANGO_ADMINS="Chris Kessler,chriskesslergrfx@gmail.com"
+
+    LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+    },
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "verbose",
+        },
+        "mail_admins": {
+            "level": "ERROR",
+            "class": "django.utils.log.AdminEmailHandler",
+            "filters": ["require_debug_false"],
+        },
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["mail_admins"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+    },
+    }
+
 class Prod(Dev):
   DEBUG = False
   SECRET_KEY = values.SecretValue()
   ALLOWED_HOSTS = values.ListValue(["localhost", "0.0.0.0", ".codio.io"])
+
+
+
+"""
+We’ve also introduced a filter which we’ve given the ID require_debug_false.
+This uses the filter class django.utils.log.RequireDebugFalse, which is a class that only passes message through when the DEBUG settings is False.
+We apply this filter to mail_admins handler, so that error emails are only sent in production environments (otherwise they’d be inundated as we developed our Django apps).
+Finally we set this handler only for the django.request, so only when exceptions are unhandled does it get sent. We make sure to add "propagate": True so that the stack traces also get logged to the console during development.
+"""
